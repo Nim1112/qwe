@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Entry Form with QR/Barcode Scanner</title>
+    <style>
+        #reader {
+            width: 300px;
+            height: 300px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Prime Engineering Lanks Pvt Ltd</h2>
+    <form id="materialForm">
+        <label for="siteId">Site ID: </label>
+        <input type="text" id="siteId" name="siteId"><br><br>
+        
+        <label for="siteName">Site Name: </label>
+        <input type="text" id="siteName" name="siteName"><br><br>
+
+        <label for="date">Date: </label>
+        <input type="date" id="date" name="date"><br><br>
+
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Material</th>
+                    <th>Serial Number</th>
+                    <th>Qty</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody id="materialsTable">
+                <tr>
+                    <td><input type="number" name="no"></td>
+                    <td><input type="text" name="material"></td>
+                    <td>
+                        <!-- Serial Number Field -->
+                        <input type="text" name="serialNumber" class="serial-input">
+                        <button type="button" onclick="startScan(this)">Scan QR/Barcode</button>
+                        <div id="reader" style="display:none;"></div>
+                    </td>
+                    <td><input type="number" name="qty"></td>
+                    <td><input type="text" name="remark"></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <button type="button" onclick="addRow()">Add Row</button><br><br>
+        <button type="button" onclick="generatePDF()">Generate PDF</button>
+    </form>
+
+    <!-- Include QR and Barcode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
+    <script>
+        function addRow() {
+            const table = document.getElementById("materialsTable");
+            const row = table.insertRow();
+            row.innerHTML = '<td><input type="number" name="no"></td>' +
+                            '<td><input type="text" name="material"></td>' +
+                            '<td><input type="text" name="serialNumber" class="serial-input">' +
+                            '<button type="button" onclick="startScan(this)">Scan QR/Barcode</button>' +
+                            '<div id="reader" style="display:none;"></div></td>' +
+                            '<td><input type="number" name="qty"></td>' +
+                            '<td><input type="text" name="remark"></td>';
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const siteId = document.getElementById('siteId').value;
+            const siteName = document.getElementById('siteName').value;
+            const date = document.getElementById('date').value;
+
+            doc.text(`Prime Engineering Lanks Pvt Ltd`, 10, 10);
+            doc.text(`Site ID: ${siteId}`, 10, 20);
+            doc.text(`Site Name: ${siteName}`, 10, 30);
+            doc.text(`Date: ${date}`, 10, 40);
+
+            const table = document.getElementById("materialsTable");
+            let yPosition = 50;
+            for (let row of table.rows) {
+                const no = row.cells[0].querySelector("input").value;
+                const material = row.cells[1].querySelector("input").value;
+                const serialNumber = row.cells[2].querySelector("input").value;
+                const qty = row.cells[3].querySelector("input").value;
+                const remark = row.cells[4].querySelector("input").value;
+                doc.text(`${no} ${material} ${serialNumber} ${qty} ${remark}`, 10, yPosition);
+                yPosition += 10;
+            }
+
+            doc.save("material_form.pdf");
+        }
+
+        function startScan(button) {
+            const readerDiv = document.getElementById('reader');  // Get the reader div
+            const serialInput = button.previousElementSibling;  // Get the input element for the serial number
+            
+            // Toggle the visibility of the QR/Barcode scanner
+            readerDiv.style.display = 'block';  // Show the scanner UI
+            
+            // Initialize the QR/Barcode scanner
+            const html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },  // Use back camera for scanning
+                {
+                    fps: 10,    // Frames-per-second for the scanning
+                    qrbox: { width: 250, height: 250 }  // Define the scanning box size
+                },
+                (decodedText) => {
+                    // Put the scanned QR/Barcode data into the Serial Number input
+                    serialInput.value = decodedText;
+                    
+                    // Stop the scanner once data is captured and hide the scanner div
+                    html5QrCode.stop().then(() => {
+                        readerDiv.style.display = 'none';  // Hide the scanner
+                    }).catch(err => {
+                        console.error(err);
+                    });
+                },
+                (errorMessage) => {
+                    // Handle scan errors or no QR/Barcode found
+                    console.log("Scanning error: ", errorMessage);
+                }
+            ).catch(err => {
+                console.error("Error starting the scanner: ", err);
+            });
+        }
+    </script>
+</body>
+</html>
